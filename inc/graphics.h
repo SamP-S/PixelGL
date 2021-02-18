@@ -3,8 +3,14 @@
 #define GL_GLEXT_PROTOTYPES 1
 
 #include <SDL2/SDL.h>
-#include <GL/gl.h>
-#include <GL/glu.h> // get rid of when not using gluPerspective
+#include <SDL2/SDL_opengl.h>
+
+#ifdef _WIN32 
+    #include <gl/GL.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <assert.h>
 
 #define WINDOW_WIDTH 800
@@ -31,55 +37,47 @@ class GraphicsEngine
             SDL_Event Event;
             while (SDL_PollEvent(&Event))
             {
-            if (Event.type == SDL_KEYDOWN)
-            {
-                switch (Event.key.keysym.sym)
+                if (Event.type == SDL_KEYDOWN)
                 {
-                case SDLK_ESCAPE:
-                    running = 0;
-                    break;
-                case 'f':
-                    fullscreen = !fullscreen;
-                    if (fullscreen)
+                    switch (Event.key.keysym.sym)
                     {
-                    SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                    case SDLK_ESCAPE:
+                        running = 0;
+                        break;
+                    case 'f':
+                        fullscreen = !fullscreen;
+                        if (fullscreen)
+                        {
+                        SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                        }
+                        else
+                        {
+                        SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS);
+                        }
+                        break;
+                    default:
+                        break;
                     }
-                    else
+                    }
+                    else if (Event.type == SDL_QUIT)
                     {
-                    SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS);
+                        running = 0;
                     }
-                    break;
-                default:
-                    break;
                 }
-            }
-            else if (Event.type == SDL_QUIT)
-            {
-                running = 0;
-            }
+
+            InitGL();
+            SetViewport(800, 600);
+            Render();
+
+            SDL_GL_SwapWindow(window_ptr);
         }
 
-        }
+        SDL_Quit();
+        
         //SDL_Renderer* displayRenderer;
         //SDL_RendererInfo displayRendererInfo;
         //SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_OPENGL, &displayWindow, &displayRenderer);
         //SDL_GetRendererInfo(displayRenderer, &displayRendererInfo);
-        /*TODO: Check that we have OpenGL */
-        // if ((displayRendererInfo.flags & SDL_RENDERER_ACCELERATED) == 0 ||
-        //     (displayRendererInfo.flags & SDL_RENDERER_TARGETTEXTURE) == 0) {
-        //     /*TODO: Handle this. We have no render surface and not accelerated. */
-        //     }
-
-        // InitGL();
-        // SetViewport(800, 600);
-        // Render();
-
-        // SDL_RenderPresent(displayRenderer);
-        // SDL_Rect rect = SDL_Rect();
-        // rect.x = 0; rect.y = 0;
-        // rect.w = 100; rect.h = 50;
-        // SDL_Delay(1000);
-        // SDL_Quit();
     }
 
     void InitGL()
@@ -121,9 +119,6 @@ class GraphicsEngine
         /* change to the projection matrix and set our viewing volume. */
         glMatrixMode( GL_PROJECTION );
         glLoadIdentity( );
-
-        /* Set our perspective */
-        gluPerspective( 45.0f, ratio, 0.1f, 100.0f );
 
         /* Make sure we're chaning the model view and not the projection */
         glMatrixMode( GL_MODELVIEW );

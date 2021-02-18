@@ -1,1 +1,3 @@
 .vscode/
+dependencies/
+build/win/SDL2.dll
