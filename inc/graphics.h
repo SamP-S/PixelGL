@@ -1,36 +1,88 @@
+// Allows for external bindings of OpenGL functions
+// SDL2 handles the rest
+#define GL_GLEXT_PROTOTYPES 1
+
 #include <SDL2/SDL.h>
-//#include <SDL2/SDL_opengl.h>
-#include <GL/glu.h>
 #include <GL/gl.h>
+#include <GL/glu.h> // get rid of when not using gluPerspective
+#include <assert.h>
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+#define WINDOW_FLAGS SDL_WINDOW_OPENGL
 
 class GraphicsEngine 
 {
     public:
     GraphicsEngine() 
     {
+        // initialise SDL
         SDL_Init(SDL_INIT_VIDEO);
-        SDL_Window* displayWindow;
-        SDL_Renderer* displayRenderer;
-        SDL_RendererInfo displayRendererInfo;
-        SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_OPENGL, &displayWindow, &displayRenderer);
-        SDL_GetRendererInfo(displayRenderer, &displayRendererInfo);
-        /*TODO: Check that we have OpenGL */
-        if ((displayRendererInfo.flags & SDL_RENDERER_ACCELERATED) == 0 ||
-            (displayRendererInfo.flags & SDL_RENDERER_TARGETTEXTURE) == 0) {
-            /*TODO: Handle this. We have no render surface and not accelerated. */
+        // create window
+        SDL_Window* window_ptr = SDL_CreateWindow("OpenGL 3.0", 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS);
+        std::cout << window_ptr << std::endl;
+        assert(window_ptr);
+        // create context
+        SDL_GLContext context = SDL_GL_CreateContext(window_ptr);
+        
+        bool running = true;
+        bool fullscreen = false;
+        while (running) {
+            SDL_Event Event;
+            while (SDL_PollEvent(&Event))
+            {
+            if (Event.type == SDL_KEYDOWN)
+            {
+                switch (Event.key.keysym.sym)
+                {
+                case SDLK_ESCAPE:
+                    running = 0;
+                    break;
+                case 'f':
+                    fullscreen = !fullscreen;
+                    if (fullscreen)
+                    {
+                    SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                    }
+                    else
+                    {
+                    SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS);
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+            else if (Event.type == SDL_QUIT)
+            {
+                running = 0;
+            }
         }
 
-        Display_InitGL();
-        Display_SetViewport(800, 600);
-        Display_Render();
+        }
+        //SDL_Renderer* displayRenderer;
+        //SDL_RendererInfo displayRendererInfo;
+        //SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_OPENGL, &displayWindow, &displayRenderer);
+        //SDL_GetRendererInfo(displayRenderer, &displayRendererInfo);
+        /*TODO: Check that we have OpenGL */
+        // if ((displayRendererInfo.flags & SDL_RENDERER_ACCELERATED) == 0 ||
+        //     (displayRendererInfo.flags & SDL_RENDERER_TARGETTEXTURE) == 0) {
+        //     /*TODO: Handle this. We have no render surface and not accelerated. */
+        //     }
 
-        SDL_RenderPresent(displayRenderer);
+        // InitGL();
+        // SetViewport(800, 600);
+        // Render();
 
-        SDL_Delay(5000);
-        SDL_Quit();
+        // SDL_RenderPresent(displayRenderer);
+        // SDL_Rect rect = SDL_Rect();
+        // rect.x = 0; rect.y = 0;
+        // rect.w = 100; rect.h = 50;
+        // SDL_Delay(1000);
+        // SDL_Quit();
     }
 
-    void Display_InitGL()
+    void InitGL()
     {
         /* Enable smooth shading */
         glShadeModel( GL_SMOOTH );
@@ -51,7 +103,7 @@ class GraphicsEngine
         glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
     }
     /* function to reset our viewport after a window resize */
-    int Display_SetViewport( int width, int height )
+    int SetViewport( int width, int height )
     {
         /* Height / width ration */
         GLfloat ratio;
@@ -82,7 +134,7 @@ class GraphicsEngine
         return 1;
     }
 
-    void Display_Render()
+    void Render()
     {
         /* Set the background black */
         glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -92,6 +144,7 @@ class GraphicsEngine
         /* Move Left 1.5 Units And Into The Screen 6.0 */
         glLoadIdentity();
         glTranslatef( -1.5f, 0.0f, -6.0f );
+
 
         glBegin( GL_TRIANGLES );            /* Drawing Using Triangles */
         glVertex3f(  0.0f,  1.0f, 0.0f ); /* Top */
