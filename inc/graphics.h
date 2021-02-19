@@ -12,6 +12,7 @@
 #endif
 
 #include <assert.h>
+#include <3D_Math.h>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -20,6 +21,8 @@
 class GraphicsEngine 
 {
     public:
+    SDL_GLContext context;
+
     GraphicsEngine() 
     {
         // initialise SDL
@@ -29,7 +32,7 @@ class GraphicsEngine
         std::cout << window_ptr << std::endl;
         assert(window_ptr);
         // create context
-        SDL_GLContext context = SDL_GL_CreateContext(window_ptr);
+        context = SDL_GL_CreateContext(window_ptr);
         
         bool running = true;
         bool fullscreen = false;
@@ -158,6 +161,31 @@ class GraphicsEngine
         glEnd( );                           /* Done Drawing The Quad */
 
         
+    }
+
+    void ErrorCheck()
+    {
+        GLenum error = glGetError();
+
+        if (error == GL_NO_ERROR) {
+            std::cout << "OK: all good" << std::endl;
+        } else {
+            std::cout << "ERROR: ";
+        }
+
+        if (error == GL_INVALID_OPERATION) {
+            std::cout << "INVALID OPERATION" << std::endl;
+        } else if (error == GL_INVALID_VALUE) {
+            std::cout << "NO VALUE" << std::endl;
+        } else if (error == GL_OUT_OF_MEMORY) {
+            std::cout << "NO MEMORY" << std::endl;
+        } else if (error == GL_STACK_OVERFLOW) {
+            std::cout << "NO OVERFLOW" << std::endl;
+        } else if (error == GL_INVALID_FRAMEBUFFER_OPERATION) {
+            std::cout << "Invalid Framebuffer" << std::endl;
+        } else if (error == GL_OUT_OF_MEMORY) {
+            std::cout << "Out of Memory" << std::endl;
+        }
     }
 
 };

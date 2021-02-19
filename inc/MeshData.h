@@ -1,3 +1,5 @@
+#pragma once
+
 /* Vertex Data */
 class SimpleMesh {
 	public:
