@@ -1,3 +1,4 @@
 .vscode/
 dependencies/
-build/win/SDL2.dll
+shaders/
+lib/

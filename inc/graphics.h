@@ -12,11 +12,30 @@
 #endif
 
 #include <assert.h>
-#include <3D_Math.h>
+#include "m3d.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_FLAGS SDL_WINDOW_OPENGL
+
+class ResoureManager {
+    private:
+    GLuint vbos[64];
+    GLuint vaos[8];
+    GLuint textures[64];
+
+    ResoureManager() {
+
+    }
+
+    bool LoadModel() {
+        return true;
+    }
+
+    bool LoadTexure() {
+        return true;
+    }
+};
 
 class GraphicsEngine 
 {
