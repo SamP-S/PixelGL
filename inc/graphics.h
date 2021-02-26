@@ -70,6 +70,37 @@ class WindowManager {
         SDL_Quit();
     }
 
+    void PollEvents() {
+        SDL_Event event;
+        // SDL_PollEvent returns 1 while there is an event in the queue
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                // Window event
+                case SDL_WINDOWEVENT:
+                    break;
+                // Keyboard event
+                case SDL_KEYDOWN:
+                    break;
+                case SDL_KEYUP:
+                    break;
+                // Mouse button event
+                case SDL_MOUSEBUTTONDOWN:
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    break;
+                case SDL_MOUSEWHEEL:
+                    break;
+                // Mouse movement event
+                case SDL_MOUSEMOTION:
+                    break;
+                // Exit event
+                case SDL_QUIT:
+                    break;
+            }
+        }
+
+    }
+
     void SwapBuffers() {
         SDL_GL_SwapWindow(window_ptr);
         SDL_Delay(2000);
@@ -156,19 +187,17 @@ class GraphicsEngine
         /* Clear The Screen And The Depth Buffer */
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-        /* Move Left 1.5 Units And Into The Screen 6.0 */
         glLoadIdentity();
-        glTranslatef( -1.5f, 0.0f, -6.0f );
+        glTranslatef( -1.0f, 0.0f, 0.0f);
 
-
+        glColor3f(1.0f, 1.0f, 1.0f);
         glBegin( GL_TRIANGLES );            /* Drawing Using Triangles */
         glVertex3f(  0.0f,  1.0f, 0.0f ); /* Top */
         glVertex3f( -1.0f, -1.0f, 0.0f ); /* Bottom Left */
         glVertex3f(  1.0f, -1.0f, 0.0f ); /* Bottom Right */
         glEnd( );                           /* Finished Drawing The Triangle */
 
-        /* Move Right 3 Units */
-        glTranslatef( 3.0f, 0.0f, 0.0f );
+        glTranslatef( 2.0f, 1.0f, 0.0f );
 
         glBegin( GL_QUADS );                /* Draw A Quad */
         glVertex3f( -1.0f,  1.0f, 0.0f ); /* Top Left */
