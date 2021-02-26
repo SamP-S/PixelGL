@@ -37,69 +37,67 @@ class ResoureManager {
     }
 };
 
-class GraphicsEngine 
-{
+class WindowManager {
     public:
-    SDL_GLContext context;
+    //static int winWidth;
+    //static int winHeight;
 
-    GraphicsEngine() 
-    {
-        // initialise SDL
+    SDL_GLContext context;
+    SDL_Window* window_ptr;
+
+    WindowManager(void) {
+
+        // Initialise SDL
         SDL_Init(SDL_INIT_VIDEO);
+
         // create window
-        SDL_Window* window_ptr = SDL_CreateWindow("OpenGL 3.0", 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS);
-        std::cout << window_ptr << std::endl;
+        this->window_ptr = SDL_CreateWindow("OpenGL 3.0", 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS);
         assert(window_ptr);
+
         // create context
         context = SDL_GL_CreateContext(window_ptr);
-        
-        bool running = true;
-        bool fullscreen = false;
-        while (running) {
-            SDL_Event Event;
-            while (SDL_PollEvent(&Event))
-            {
-                if (Event.type == SDL_KEYDOWN)
-                {
-                    switch (Event.key.keysym.sym)
-                    {
-                    case SDLK_ESCAPE:
-                        running = 0;
-                        break;
-                    case 'f':
-                        fullscreen = !fullscreen;
-                        if (fullscreen)
-                        {
-                        SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS | SDL_WINDOW_FULLSCREEN_DESKTOP);
-                        }
-                        else
-                        {
-                        SDL_SetWindowFullscreen(window_ptr, WINDOW_FLAGS);
-                        }
-                        break;
-                    default:
-                        break;
-                    }
-                    }
-                    else if (Event.type == SDL_QUIT)
-                    {
-                        running = 0;
-                    }
-                }
 
-            InitGL();
-            SetViewport(800, 600);
-            Render();
-
-            SDL_GL_SwapWindow(window_ptr);
-        }
-
-        SDL_Quit();
-        
+        // get event
+        SDL_Event Event;
+        SDL_PollEvent(&Event);
         //SDL_Renderer* displayRenderer;
         //SDL_RendererInfo displayRendererInfo;
         //SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_OPENGL, &displayWindow, &displayRenderer);
         //SDL_GetRendererInfo(displayRenderer, &displayRendererInfo);
+    }
+
+    ~WindowManager(void) {
+        SDL_Quit();
+    }
+
+    void SwapBuffers() {
+        SDL_GL_SwapWindow(window_ptr);
+        SDL_Delay(2000);
+    }
+
+};
+
+
+
+class GraphicsEngine 
+{
+    public:
+    void* context;
+    WindowManager* window;
+
+    GraphicsEngine() 
+    {
+
+    }
+
+    bool AttachWindow(WindowManager* window) {
+        if (this->window == NULL) {
+            return false;
+        }
+        this->window = window;
+        InitGL();
+        SetViewport(800, 600);
+        Render();
     }
 
     void InitGL()
@@ -179,10 +177,10 @@ class GraphicsEngine
         glVertex3f( -1.0f, -1.0f, 0.0f ); /* Bottom Left */
         glEnd( );                           /* Done Drawing The Quad */
 
-        
+        window->SwapBuffers();
     }
 
-    void ErrorCheck()
+    static void ErrorCheck()
     {
         GLenum error = glGetError();
 
