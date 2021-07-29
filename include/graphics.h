@@ -1,10 +1,5 @@
 // Allows for external bindings of OpenGL functions
-// SDL2 handles the rest
-
-
-
-
-
+// SDL2 handles the rest 
 #ifdef _WIN32 
     //#include <gl/GL.h>
     #define GL_VERSION_4_4
@@ -17,204 +12,483 @@
     #include <SDL2/SDL_opengl.h>
 #endif
 
-#include <string>
+// includes
 #include <map>
 #include <assert.h>
-#include "m3d.h"
+#include <string>
+#include <vector>
+#include <iostream>
+#include <istream>
+#include <fstream>
+#include <sstream>
+#include <memory>
+
+#define LA_OPEN_GL
+#include "la.h"
+
 #include "window.h"
+#include "frametimer.h"
 
-/*
-class ResoureManager {
-    private:
-    GLuint vbos[64];
-    GLuint vaos[8];
-    GLuint textures[64];
-
-    std::map<std::string, GLuint> vbo_map;
-    std::map<std::string, GLuint> vao_map;
-    std::map<std::string, GLuint> texture_map;
-    
-    ResoureManager() {
-
-    }
-
-    bool LoadModel() {
-        return true;
-    }
-
-    bool LoadTexure() {
-        return true;
-    }
+enum TextureType {
+    NONE = 0,
+    DIFFUSE = 1
 };
-*/
 
-class GraphicsEngine 
-{
+enum PropertyType {
+    FLOAT = 0,
+    DOUBLE = 1,
+    STRING = 2,
+    INT = 3,
+    UINT = 4,
+    BUFFER = 5,
+    TEXTURE = 6
+};
+
+class MaterialPropertyFrame {
+    private: 
+        std::string mName;
+        PropertyType mType;
+        TextureType mTexType;
+
     public:
-    void* context;
-    WindowManager* window;
+        MaterialPropertyFrame(std::string s, PropertyType p, TextureType t) {
+            this->mName = s;
+            this->mType = p;
+            this->mTexType = t;
+        }
 
-    GraphicsEngine() 
-    {
+        std::string GetName() {
+            return this->mName;
+        }
+
+        bool SetName(std::string s) {
+            this->mName = s;
+            return true;
+        }
+
+        PropertyType GetType() {
+            return this->mType;
+        }
+
+        TextureType GetTexType() {
+            return this->mTexType;
+        }
+};
+
+template<typename T>
+class MaterialProperty : public MaterialPropertyFrame {
+    private:
+        T data;
+};
+
+
+class Material {
+    private:
+        unsigned int mNumProperties = 0;
+        std::vector<std::shared_ptr<MaterialPropertyFrame>> mProperties;
+   
+    public: 
+        bool Add(MaterialProperty<float>& p) {
+            std::shared_ptr<MaterialPropertyFrame> ptr(&p);
+            this->mProperties.push_back(ptr);
+            this->mNumProperties += 1;
+            return true;
+        }
+
+        bool Get(int index, MaterialProperty<float>* mp) {
+            if (index < 0 || index >= static_cast<int>(this->mNumProperties)) {
+                return false;
+            } else {
+                if (this->mProperties[index]->GetType() == PropertyType::FLOAT) {
+                    mp = static_cast<MaterialProperty<float>*>(this->mProperties[index].get());
+                } else {
+                    mp = NULL;
+                    return false;
+                }
+                return true;
+            }
+        }
+};
+
+class Face {
+    private:
+        unsigned int mNumIndices;
+        unsigned int mIndices[];
+};
+
+class Mesh {
+    private:
+        std::string mName;
+        unsigned int mNumVertices;
+        unsigned int mNumNormals;
+        unsigned int mNumTexCoords;
+        unsigned int mNumFaces;
+        LA::vec3* mVertices;
+        LA::vec3* mNormals;
+        LA::vec3* mTextureCoords;
+        LA::vec4* mColours;
+        std::vector<Face> mFaces;
+        Material mMaterial;
+};
+
+// class ResoureManager {
+//     private:
+//     GLuint vbos[64];
+//     GLuint vaos[8];
+//     GLuint textures[64];
+
+//     std::map<std::string, GLuint> vbo_map;
+//     std::map<std::string, GLuint> vao_map;
+//     std::map<std::string, GLuint> texture_map;
+    
+//     ResoureManager() {
+
+//     }
+
+//     bool Get() {
+
+//     }
+
+//     bool LoadModel() {
+//         return true;
+//     }
+
+//     bool LoadTexure() {
+//         return true;
+//     }
+// };
+
+enum ShaderType {
+    VERTEX = 0,
+    FRAGMENT = 1,
+    COMPUTE = 2
+};
+
+class Shader {
+    private:
         
-    }
+        bool validShader = false;
 
-    bool AttachWindow(WindowManager* window) {
-        if (this->window == NULL) {
+    public:
+        unsigned int ID;
+        std::string vertexCode = "";
+        std::string fragmentCode = "";
+
+        Shader() {
+
+        }
+
+        Shader(std::string vs, std::string fs) {
+            this->vertexCode = vs;
+            this->fragmentCode = fs;
+            Compile();
+        }
+
+        Shader(const char* vertexFilePath, const char* fragmentFilePath) {
+            // 1. retrieve the vertex/fragment source code from filePath
+            GetShaderFromFile(vertexFilePath, "VERTEX");
+            GetShaderFromFile(fragmentFilePath, "FRAGMENT");
+            Compile();
+        }
+
+    public:
+        /*
+        IMPLEMENT
+        glGetShaderiv
+        glGetShaderInfoLog
+        glGetAttribLocation
+        */
+
+        bool GetShaderFromFile(const char* filePath, std::string type) {
+            std::string code;
+            std::ifstream shaderFile;
+            // ensure ifstream objects can throw exceptions:
+            shaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
+            try {
+                // open files
+                shaderFile.open(filePath);
+                std::stringstream shaderStream;
+                // read file's buffer contents into streams
+                shaderStream << shaderFile.rdbuf();
+                // close file handlers
+                shaderFile.close();
+                // convert stream into string
+                code = shaderStream.str();
+            }
+            catch (std::ifstream::failure& e) {
+                std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+                return false;
+            }
+            if (type == "VERTEX") {
+                this->vertexCode = code;
+            } else {
+                this->fragmentCode = code;
+            }
+            if (this->validShader) {
+                Compile();
+            }
+            return true;
+        }
+
+        bool CheckShaderCompileErrors(unsigned int shader, std::string type) {
+            int success;
+            char infoLog[1024];
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+            if (!success) {
+                glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+                std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+                return false;
+            }
+            return true;
+        }
+
+        bool CheckProgramCompileErrors(unsigned int program) {
+            int success;
+            char infoLog[1024];
+            glGetProgramiv(program, GL_LINK_STATUS, &success);
+            if (!success) {
+                glGetProgramInfoLog(program, 1024, NULL, infoLog);
+                std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+                return false;
+            }
+            return true;
+        }
+
+        bool Compile() {
+            const char* vShaderCode = vertexCode.c_str();
+            const char * fShaderCode = fragmentCode.c_str();
+
+            unsigned int vertex, fragment;
+
+            // vertex shader
+            vertex = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(vertex, 1, &vShaderCode, NULL);
+            glCompileShader(vertex);
+            if (!CheckShaderCompileErrors(vertex, "VERTEX")) {
+                return false;
+            }
+
+            // fragment Shader
+            fragment = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(fragment, 1, &fShaderCode, NULL);
+            glCompileShader(fragment);
+            if (!CheckShaderCompileErrors(fragment, "FRAGMENT")) {
+                return false;
+            }
+
+            // shader Program
+            this->ID = glCreateProgram();
+            glAttachShader(ID, vertex);
+            glAttachShader(ID, fragment);
+            // glBindFragDataLocation(ID, 0, "oColour");
+            glLinkProgram(ID);
+            if (!CheckProgramCompileErrors(ID)) {
+                return false;
+            }
+
+            // delete the shaders as they're linked into our program now and no longer necessary
+            glDeleteShader(vertex);
+            glDeleteShader(fragment);
+            this->validShader = true;
+            return true;
+        }
+
+        bool Use() {
+            if (this->validShader) {
+                glUseProgram(this->ID);
+                return true;
+            }
             return false;
         }
-        this->window = window;
-        InitGL();
-        SetViewport(800, 600);
-        Render();
-        return true;
-    }
 
-    bool DetachWindow() {
-        this->window = NULL;
-        return true;
-    }
-
-    void InitGL()
-    {
-        /* Initialise GLEW */
-        glewExperimental = GL_TRUE;
-        glewInit();
-
-        /* Enable smooth shading */
-        glShadeModel( GL_SMOOTH );
-
-        /* Set the background black */
-        glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-
-        /* Depth buffer setup */
-        glClearDepth( 1.0f );
-
-        /* Enables Depth Testing */
-        glEnable( GL_DEPTH_TEST );
-
-        /* The Type Of Depth Test To Do */
-        glDepthFunc( GL_LEQUAL );
-
-        /* Really Nice Perspective Calculations */
-        glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
-    }
-    /* function to reset our viewport after a window resize */
-    int SetViewport( int width, int height )
-    {
-        /* Height / width ration */
-        GLfloat ratio;
-
-        /* Protect against a divide by zero */
-        if ( height == 0 ) {
-            height = 1;
+        void SetBool(const std::string& name, bool value) const {
+            glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
         }
 
-        ratio = ( GLfloat )width / ( GLfloat )height;
+        void SetInt(const std::string& name, int value) const {
+            glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+        }
 
-        /* Setup our viewport. */
-        glViewport( 0, 0, ( GLsizei )width, ( GLsizei )height );
+        void SetFloat(const std::string& name, float value) const {
+            glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+        }
 
-        return 1;
-    }
+        void SetVec2(const std::string& name, const LA::vec2& value) const {
+            glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+        }
 
-    void Render()
-    {
-        /* Set the background black */
-        glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-        /* Clear The Screen And The Depth Buffer */
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        void SetVec2(const std::string& name, float x, float y) const {
+            glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
+        }
 
-        float vertices[] = {
-            0.0f,  0.5f, // Vertex 1 (X, Y)
-            0.5f, -0.5f, // Vertex 2 (X, Y)
-            -0.5f, -0.5f  // Vertex 3 (X, Y)
-        };
+        void SetVec3(const std::string& name, const LA::vec3& value) const {
+            glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+        }
 
-        GLuint vbo;
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        void SetVec3(const std::string& name, float x, float y, float z) const {
+            glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
+        }
 
-        const char* vertexSource = R"glsl(
-            #version 150 core
+        void SetVec4(const std::string& name, const LA::vec4& value) const {
+            glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+        }
 
-            in vec2 position;
+        void SetVec4(const std::string& name, float x, float y, float z, float w) const {
+            glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
+        }
 
-            void main()
-            {
-                gl_Position = vec4(position, 0.0, 1.0);
-            }
-        )glsl";
-        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &vertexSource, NULL);
-        glCompileShader(vertexShader);
+        void SetMat2(const std::string& name, const LA::mat2& value) const {
+            glUniformMatrix2fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &value[0][0]);
+        }
 
-        GLint status;
-        char buffer[512];
-        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-        glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
+        void SetMat3(const std::string& name, const LA::mat3& value) const {
+            glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &value[0][0]);
+        }
 
-        const char* fragmentSource = R"glsl(
-            #version 150 core
+        void SetMat4(const std::string& name, const LA::mat4& value) const {
+            glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &value[0][0]);
+        }
+};
 
-            out vec4 outColor;
+class GraphicsEngine {
+    private:
+        unsigned int frameNum = 0;
 
-            void main()
-            {
-                outColor = vec4(1.0, 1.0, 1.0, 1.0);
-            }
-        )glsl";
-        GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
-        glCompileShader(fragmentShader);
-
-        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+    public:
+        void* context;
+        WindowManager* window;
+        FrameTimer ft;
+        Shader shader;
+        GLuint vbo, vao;
         
-        glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
+        GraphicsEngine(WindowManager* window) {
+            AttachWindow(window);
+            InitGL();
+            SetViewport(window->width, window->height);
+            ft = FrameTimer();
+        }
 
-        GLuint shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
-        glBindFragDataLocation(shaderProgram, 0, "outColor");
-        glLinkProgram(shaderProgram);
-        glUseProgram(shaderProgram);
+        bool AttachWindow(WindowManager* window) {
+            if (window == NULL) {
+                return false;
+            }
+            this->window = window;
+            return true;
+        }
 
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-        glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(posAttrib);
+        bool DetachWindow() {
+            this->window = NULL;
+            return true;
+        }
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        void InitGL()
+        {
+            /* Initialise GLEW */
+            glewExperimental = GL_TRUE;
+            glewInit();
+
+            /* Enable smooth shading */
+            glShadeModel(GL_SMOOTH);
+
+            /* Set the background black */
+            glClearColor(0.1f, 0.1f, 0.1f, 0.5f);
+
+            /* Depth buffer setup */
+            glClearDepth(1.0f);
+
+            /* Enables Depth Testing */
+            glEnable(GL_DEPTH_TEST);
+
+            /* The Type Of Depth Test To Do */
+            glDepthFunc(GL_LEQUAL);
+
+            /* Really Nice Perspective Calculations */
+            glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+            float vertices[] = {
+                -1.0f, -1.0f, 1.0f,
+                1.0f, 1.0f, 1.0f,
+                -1.0f, 1.0f, 1.0f,
+                -1.0f, -1.0f, 1.0f,
+                1.0f, -1.0f, 1.0f,
+                1.0f, 1.0f, 1.0f
+            };
+
+            
+            glGenBuffers(1, &vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+            shader = Shader("shaders\\base.vs", "shaders\\super-cool.fs");
+            glBindFragDataLocation(shader.ID, 0, "oColour");
+            shader.Use();
+
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+            GLint posAttrib = glGetAttribLocation(shader.ID, "iPosition");
+            glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+            glEnableVertexAttribArray(posAttrib);
+        }
         
-        window->SwapBuffers();
-    }
+        /* function to reset our viewport after a window resize */
+        int SetViewport( int width, int height )
+        {
+            /* Height / width ration */
+            GLfloat ratio;
 
-    static void ErrorCheck()
-    {
-        GLenum error = glGetError();
+            /* Protect against a divide by zero */
+            if ( height == 0 ) {
+                height = 1;
+            }
 
-        if (error == GL_NO_ERROR) {
-            std::cout << "OK: all good" << std::endl;
-        } else {
-            std::cout << "ERROR: ";
+            ratio = ( GLfloat )width / ( GLfloat )height;
+
+            /* Setup our viewport. */
+            glViewport( 0, 0, ( GLsizei )width, ( GLsizei )height );
+
+            return 1;
         }
 
-        if (error == GL_INVALID_OPERATION) {
-            std::cout << "INVALID OPERATION" << std::endl;
-        } else if (error == GL_INVALID_VALUE) {
-            std::cout << "NO VALUE" << std::endl;
-        } else if (error == GL_OUT_OF_MEMORY) {
-            std::cout << "NO MEMORY" << std::endl;
-        } else if (error == GL_STACK_OVERFLOW) {
-            std::cout << "NO OVERFLOW" << std::endl;
-        } else if (error == GL_INVALID_FRAMEBUFFER_OPERATION) {
-            std::cout << "Invalid Framebuffer" << std::endl;
-        } else if (error == GL_OUT_OF_MEMORY) {
-            std::cout << "Out of Memory" << std::endl;
+        void Render()
+        {
+            /* Clear The Screen And The Depth Buffer */
+            glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+            shader.SetVec3("iResolution", window->width, window->height, 1.0f);
+            shader.SetFloat("iTime", ft.GetTotalElapsed());
+            shader.SetFloat("iTimeDelta", ft.GetFrameElapsed());
+            shader.SetInt("iFrame", frameNum);
+                     
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            
+            window->SwapBuffers();
+            ft.Frame();
+            frameNum += 1;
         }
-    }
+
+        static void ErrorCheck()
+        {
+            GLenum error = glGetError();
+
+            if (error == GL_NO_ERROR) {
+                std::cout << "OK: all good" << std::endl;
+            } else {
+                std::cout << "ERROR: ";
+            }
+
+            if (error == GL_INVALID_OPERATION) {
+                std::cout << "INVALID OPERATION" << std::endl;
+            } else if (error == GL_INVALID_VALUE) {
+                std::cout << "NO VALUE" << std::endl;
+            } else if (error == GL_OUT_OF_MEMORY) {
+                std::cout << "NO MEMORY" << std::endl;
+            } else if (error == GL_STACK_OVERFLOW) {
+                std::cout << "NO OVERFLOW" << std::endl;
+            } else if (error == GL_INVALID_FRAMEBUFFER_OPERATION) {
+                std::cout << "Invalid Framebuffer" << std::endl;
+            } else if (error == GL_OUT_OF_MEMORY) {
+                std::cout << "Out of Memory" << std::endl;
+            }
+        }
 
 };
