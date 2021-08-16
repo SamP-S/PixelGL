@@ -1,56 +1,58 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
 #include <assert.h>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
-#define WINDOW_FLAGS SDL_WINDOW_OPENGL
 
 class WindowManager {
     public:
         //static int winWidth;
         //static int winHeight;
 
-        SDL_GLContext context;
-        SDL_Window* window_ptr;
-        int width = WINDOW_WIDTH;
-        int height = WINDOW_HEIGHT;
+        const char* glsl_version = "#version 130";
+        SDL_GLContext gl_context;
+        SDL_Window* window;
+        int width;
+        int height;
+        bool isQuit = false;
 
         WindowManager() : WindowManager(WINDOW_WIDTH, WINDOW_HEIGHT) {
         }
 
-        WindowManager(int _width, int _height) {
-            this->width = _width;
-            this->height = _height;
+        WindowManager(int _width, int _height) : width(_width), height(_height) {
+            // limit minimum window size
+            if (_width < WINDOW_WIDTH)
+                _width = WINDOW_WIDTH;
+            if (_height < WINDOW_HEIGHT)
+                _height = WINDOW_HEIGHT;
 
-            // Initialise SDL
-            SDL_Init(SDL_INIT_VIDEO);
-            SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-            SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
-            SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-            SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-            SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-            SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, 8 );
+            // GL 3.0 + GLSL 130
+            glsl_version = "#version 130";
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-            SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-
-            // create window
-            this->window_ptr = SDL_CreateWindow("OpenGL 3.0", 0, 0, width, height, WINDOW_FLAGS);
-            assert(window_ptr);
-
-            // create context
-            context = SDL_GL_CreateContext(window_ptr);
+            // Create window with graphics context
+            SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+            SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+            SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+            SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+            window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _width, _height, window_flags);
+            gl_context = SDL_GL_CreateContext(window);
+            SDL_GL_MakeCurrent(window, gl_context);
+            SDL_GL_SetSwapInterval(1); // Enable vsync
+            SDL_SetWindowMinimumSize(window, WINDOW_WIDTH, WINDOW_HEIGHT);
 
             // get event
             SDL_Event Event;
             SDL_PollEvent(&Event);
-            //SDL_Renderer* displayRenderer;
-            //SDL_RendererInfo displayRendererInfo;
-            //SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_OPENGL, &displayWindow, &displayRenderer);
-            //SDL_GetRendererInfo(displayRenderer, &displayRendererInfo);
         }
 
         ~WindowManager() {
+            SDL_GL_DeleteContext(gl_context);
+            SDL_DestroyWindow(window);
             SDL_Quit();
         }
 
@@ -79,14 +81,18 @@ class WindowManager {
                         break;
                     // Exit event
                     case SDL_QUIT:
+                        isQuit = true;
                         break;
                 }
             }
     }
 
     void SwapBuffers() {
-        SDL_GL_SwapWindow(window_ptr);
-        // SDL_Delay(2000);
+        // SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
+        // SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
+        // SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+        SDL_GL_MakeCurrent(window, gl_context);
+        SDL_GL_SwapWindow(window);
     }
 
     void Delay(int ms) {

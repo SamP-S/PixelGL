@@ -4,7 +4,7 @@
     //#include <gl/GL.h>
     #define GL_VERSION_4_4
     #include <GL/glew.h>
-    #include <SDL2/SDL_opengl.h>
+    #include <SDL_opengl.h>
 #else
     #define GL_GLEXT_PROTOTYPES
     #include <GL/gl.h>
@@ -129,13 +129,89 @@ class Mesh {
         LA::vec4* mColours;
         std::vector<Face> mFaces;
         Material mMaterial;
+
+    public:
+        ~Mesh() {
+            delete mVertices;
+            delete mNormals;
+            delete mTextureCoords;
+            delete mColours;
+        }
+};
+
+enum Tex_Filtering {
+    NEAREST = 0,
+    LINEAR = 1,
+    NEAREST_MIPMAP_NEAREST = 2,
+    LINEAR_MIPMAP_NEAREST = 3,
+    NEAREST_MIPMAP_LINEAR = 4,
+    LINEAR_MIPMAP_LINEAR = 5
+};
+
+enum Tex_Wrapping {
+    REPEAT = 0,
+    MIRRORED_REPEAT = 1,
+    CLAMP_TO_EDGE = 2,
+    CLAMP_TO_BORDER = 3
+};
+
+enum Tex_Params {
+    TEXTURE_MIN_FILTER = 0,
+    TEXTURE_MAG_FILTER = 1,
+    TEXTURE_WRAP_S = 2,
+    TEXTURE_WRAP_T = 3,
+    TEXTURE_WRAP_R = 4
+};
+
+enum Target {
+    TEXTURE_1D = 0,
+    TEXTURE_2D = 1,
+    TEXTURE_3D = 2,
+    TEXTURE_RECTANGLE = 3,
+    TEXTURE_BUFFER = 4,
+    TEXTURE_CUBE_MAP = 5,
+    TEXTURE_2D_MULTISAMPLE = 6
+};
+
+enum Comparison {
+    NEVER = 0,
+    ALWAYS = 1,
+    LESS = 2,
+    LEQUAL = 3,
+    EQUAL = 4,
+    NOT_EQUAL = 5,
+    GEQUAL = 6,
+    GREATER = 7
+};
+
+class Texture {
+    private:
+        unsigned int mTextureID;
+        std::string mName;
+        std::string mFilePath;
+        unsigned int mHeight;
+        unsigned int mWidth;
+        unsigned char* data;
+        Tex_Wrapping mWrappingS = Tex_Wrapping::REPEAT;
+        Tex_Wrapping mWrappingT = Tex_Wrapping::REPEAT;
+        Tex_Wrapping mWrappingR = Tex_Wrapping::REPEAT;
+        Tex_Filtering mFilteringMin = Tex_Filtering::NEAREST_MIPMAP_LINEAR;
+        Tex_Filtering mFilteringMag = Tex_Filtering::LINEAR;
+        Target mTarget;
+
+    public:
+        ~Texture() {
+            delete data;
+        }
+
+
 };
 
 // class ResoureManager {
 //     private:
-//     GLuint vbos[64];
-//     GLuint vaos[8];
-//     GLuint textures[64];
+//     std::vector<GLuint*> vbos;
+//     std::vector<GLuint*> vaos;
+//     std::vector<GLuint*> textures;
 
 //     std::map<std::string, GLuint> vbo_map;
 //     std::map<std::string, GLuint> vao_map;
@@ -166,7 +242,6 @@ enum ShaderType {
 
 class Shader {
     private:
-        
         bool validShader = false;
 
     public:
@@ -185,7 +260,7 @@ class Shader {
         }
 
         Shader(const char* vertexFilePath, const char* fragmentFilePath) {
-            // 1. retrieve the vertex/fragment source code from filePath
+            // retrieve the vertex/fragment source code from filePath
             GetShaderFromFile(vertexFilePath, "VERTEX");
             GetShaderFromFile(fragmentFilePath, "FRAGMENT");
             Compile();
@@ -198,6 +273,21 @@ class Shader {
         glGetShaderInfoLog
         glGetAttribLocation
         */
+       bool GetShaderFromString(std::string source, std::string type) {
+            if (type == "VERTEX") {
+                this->vertexCode = source;
+            } else {
+                this->fragmentCode = source;
+            }
+            if (this->validShader) {
+                Compile();
+            }
+            return true;
+        }
+
+        bool GetShaderFromCharBuffer(char* charBuffer, std::string type) {
+            return GetShaderFromString(std::string(charBuffer), type);
+        }
 
         bool GetShaderFromFile(const char* filePath, std::string type) {
             std::string code;
@@ -219,15 +309,7 @@ class Shader {
                 std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
                 return false;
             }
-            if (type == "VERTEX") {
-                this->vertexCode = code;
-            } else {
-                this->fragmentCode = code;
-            }
-            if (this->validShader) {
-                Compile();
-            }
-            return true;
+            return GetShaderFromString(code, type);
         }
 
         bool CheckShaderCompileErrors(unsigned int shader, std::string type) {
@@ -359,13 +441,20 @@ class GraphicsEngine {
         WindowManager* window;
         FrameTimer ft;
         Shader shader;
-        GLuint vbo, vao;
-        
+        GLuint vbo, vao, fbo, texColour, texDepthStencil;
+        int width, height;
+
+
         GraphicsEngine(WindowManager* window) {
             AttachWindow(window);
-            InitGL();
             SetViewport(window->width, window->height);
+            InitGL();
             ft = FrameTimer();
+        }
+
+        ~GraphicsEngine() {
+            // delete context; delete makes error even though pointer?!?
+            // delete window; causesd unknown signal error?
         }
 
         bool AttachWindow(WindowManager* window) {
@@ -381,29 +470,10 @@ class GraphicsEngine {
             return true;
         }
 
-        void InitGL()
-        {
-            /* Initialise GLEW */
+        void InitGL() {
+            // Initialise GLEW
             glewExperimental = GL_TRUE;
             glewInit();
-
-            /* Enable smooth shading */
-            glShadeModel(GL_SMOOTH);
-
-            /* Set the background black */
-            glClearColor(0.1f, 0.1f, 0.1f, 0.5f);
-
-            /* Depth buffer setup */
-            glClearDepth(1.0f);
-
-            /* Enables Depth Testing */
-            glEnable(GL_DEPTH_TEST);
-
-            /* The Type Of Depth Test To Do */
-            glDepthFunc(GL_LEQUAL);
-
-            /* Really Nice Perspective Calculations */
-            glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
             float vertices[] = {
                 -1.0f, -1.0f, 1.0f,
@@ -413,13 +483,46 @@ class GraphicsEngine {
                 1.0f, -1.0f, 1.0f,
                 1.0f, 1.0f, 1.0f
             };
-
             
+            glGenFramebuffers(1, &fbo);
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            if(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+                std::cout << "COOL: FBO hasn't yabber dabber died yet" << std::endl;
+
+            glGenTextures(1, &texColour);
+            
+            glBindTexture(GL_TEXTURE_2D, texColour);
+            glTexImage2D(   GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,
+                            GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+                                    GL_TEXTURE_2D, texColour, 0);
+
+            glGenTextures(1, &texDepthStencil);
+            glBindTexture(GL_TEXTURE_2D, texDepthStencil);
+            glTexImage2D(   GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, 
+                            GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL
+            );
+
+            glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, 
+                                    GL_TEXTURE_2D, texDepthStencil, 0);
+
+            GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            if(status != GL_FRAMEBUFFER_COMPLETE) {
+                std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+            }
+                
+            glBindFramebuffer(GL_FRAMEBUFFER, 0); 
+
+
             glGenBuffers(1, &vbo);
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-            shader = Shader("shaders\\base.vs", "shaders\\super-cool.fs");
+            shader = Shader("shaders\\base.vs", "shaders\\base.fs");
             glBindFragDataLocation(shader.ID, 0, "oColour");
             shader.Use();
 
@@ -430,29 +533,28 @@ class GraphicsEngine {
             glEnableVertexAttribArray(posAttrib);
         }
         
-        /* function to reset our viewport after a window resize */
-        int SetViewport( int width, int height )
-        {
-            /* Height / width ration */
-            GLfloat ratio;
+        // function to reset our viewport after a window resize
+        int SetViewport(int _width, int _height) {
+            this->width = _width;
+            this->height = _height;
 
             /* Protect against a divide by zero */
-            if ( height == 0 ) {
+            if (height == 0 ) {
                 height = 1;
             }
-
-            ratio = ( GLfloat )width / ( GLfloat )height;
-
-            /* Setup our viewport. */
-            glViewport( 0, 0, ( GLsizei )width, ( GLsizei )height );
+            float ratio = width / height;
 
             return 1;
         }
 
-        void Render()
-        {
+        void Render() {
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            glViewport( 0, 0, ( GLsizei )width, ( GLsizei )height );
             /* Clear The Screen And The Depth Buffer */
             glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+            glBindVertexArray(vao);
+            glDisable(GL_DEPTH_TEST);
+            shader.Use();
 
             shader.SetVec3("iResolution", window->width, window->height, 1.0f);
             shader.SetFloat("iTime", ft.GetTotalElapsed());
@@ -461,13 +563,13 @@ class GraphicsEngine {
                      
             glDrawArrays(GL_TRIANGLES, 0, 6);
             
-            window->SwapBuffers();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            
             ft.Frame();
             frameNum += 1;
         }
 
-        static void ErrorCheck()
-        {
+        static void ErrorCheck() {
             GLenum error = glGetError();
 
             if (error == GL_NO_ERROR) {
