@@ -1,16 +1,9 @@
 // Allows for external bindings of OpenGL functions
 // SDL2 handles the rest 
-#ifdef _WIN32 
-    //#include <gl/GL.h>
-    #define GL_VERSION_4_4
-    #include <GL/glew.h>
-    #include <SDL_opengl.h>
-#else
-    #define GL_GLEXT_PROTOTYPES
-    #include <GL/gl.h>
-    #define GL_VERSION_2_2
-    #include <SDL2/SDL_opengl.h>
-#endif
+
+#define GL_VERSION_4_4
+#include <GL/glew.h>
+#include <SDL_opengl.h>
 
 // includes
 #include <map>
@@ -522,7 +515,7 @@ class GraphicsEngine {
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-            shader = Shader("shaders\\base.vs", "shaders\\base.fs");
+            shader = Shader("shaders/base.vs", "shaders/base.fs");
             glBindFragDataLocation(shader.ID, 0, "oColour");
             shader.Use();
 
