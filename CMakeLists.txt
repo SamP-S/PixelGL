@@ -10,9 +10,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
 # get latest submodules
 find_package(Git REQUIRED)
-if (NOT EXISTS ${LIBTFD_DIR}/CMakeLists.txt)
+if (GIT_FOUND)
+    message("git submdule update")
     execute_process(COMMAND ${GIT_EXECUTABLE}
-        submodule update --recursive
+        submodule update --init --recursive
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 endif()
 
