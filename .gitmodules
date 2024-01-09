@@ -4,6 +4,6 @@
 [submodule "external/stb"]
 	path = external/stb
 	url = git@github.com:SamP-S/libstb.git
-[submodule "external/tinyfiledialog"]
-	path = external/tinyfiledialog
+[submodule "external/tinyfiledialogs"]
+	path = external/tinyfiledialogs
 	url = git@github.com:SamP-S/libtinyfiledialogs.git
