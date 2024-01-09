@@ -1,0 +1,11 @@
+AABB
+https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/swept-aabb-collision-detection-and-response-r3084/
+
+C Wrapper
+https://www.teddy.ch/c++_library_in_c/
+
+collision detection & response:
+https://thegeneralsolution.wordpress.com/2011/12/13/broad-phase-collision-detection-bounding-volume-hierarchies-1/
+https://www.toptal.com/game/video-game-physics-part-ii-collision-detection-for-solid-objects
+http://www.mcihanozer.com/tips/computer-graphics/collision-detection-related/uniform-grid-based/
+https://github.com/mattleibow/jitterphysics/wiki/Sweep-and-Prune

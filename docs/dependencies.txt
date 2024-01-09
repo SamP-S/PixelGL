@@ -1,0 +1,8 @@
+ assimp
+ glew
+ glm
+ imgui
+ nativefiledialog
+ SDL2
+ stb_master
+ tinyfiledialog

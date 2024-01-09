@@ -1,0 +1,24 @@
+Name 	Data Type 	
+NAME 	aiString
+COLOR_DIFFUSE 	aiColor3D
+COLOR_SPECULAR 	aiColor3D
+COLOR_AMBIENT 	aiColor3D
+COLOR_EMISSIVE 	aiColor3D
+COLOR_TRANSPARENT 	aiColor3D
+WIREFRAME 	int	bool
+TWOSIDED 	int	bool
+SHADING_MODEL 	int	enum
+BLEND_FUNC 	int	enum
+OPACITY 	float
+SHININESS 	float
+SHININESS_STRENGTH 	float
+REFRACTI 	float
+TEXTURE(t,n) 	aiString
+TEXBLEND(t,n) 	float
+TEXOP(t,n) 	int
+MAPPING(t,n) 	int
+UVWSRC(t,n) 	int
+MAPPINGMODE_U(t,n) 	int
+MAPPINGMODE_V(t,n) 	int
+TEXMAP_AXIS(t,n) 	aiVector3D
+TEXFLAGS(t,n) 	int
