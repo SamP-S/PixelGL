@@ -17,14 +17,16 @@ if (GIT_FOUND)
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 endif()
 
-add_subdirectory("./external/imgui")
+add_subdirectory("external/tinyfiledialogs")
+add_subdirectory("external/stb")
+add_subdirectory("external/imgui")
 
 # global include directories
 include_directories(graphics PUBLIC "./include")
 include_directories(graphics PUBLIC "./example")
 add_executable(graphics "./src/main.cpp")
 
-target_link_libraries(graphics PUBLIC imgui)
+target_link_libraries(graphics PUBLIC imgui tinyfiledialogs stb_image)
 
 # libs
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
@@ -42,4 +44,3 @@ target_link_libraries(graphics PUBLIC ${GLEW_LIBRARIES})
 
 find_package(OpenGL)
 target_link_libraries(graphics PUBLIC OpenGL::OpenGL)
-
