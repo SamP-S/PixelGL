@@ -44,7 +44,6 @@ class GraphicsEngine {
         int width, height;
         Texture* texBuffer[4] = { new Texture(), new Texture(), new Texture(), new Texture() };
         
-
         GraphicsEngine(WindowManager* window) {
             AttachWindow(window);
             SetViewport(window->width, window->height);
@@ -76,12 +75,12 @@ class GraphicsEngine {
             glewInit();
 
             float vertices[] = {
-                -1.0f, -1.0f, 1.0f,
-                1.0f, 1.0f, 1.0f,
-                -1.0f, 1.0f, 1.0f,
-                -1.0f, -1.0f, 1.0f,
-                1.0f, -1.0f, 1.0f,
-                1.0f, 1.0f, 1.0f
+                -1.0, -1.0, 0.0f,
+                1.0, 1.0, 0.0f,
+                -1.0, 1.0, 0.0f,
+                -1.0, -1.0, 0.0f,
+                1.0, -1.0, 0.0f,
+                1.0, 1.0, 0.0f
             };
             
             glGenFramebuffers(1, &fbo);
@@ -230,8 +229,13 @@ class GraphicsEngine {
 
         void Render() {
             glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
             glViewport( 0, 0, ( GLsizei )width, ( GLsizei )height );
             /* Clear The Screen And The Depth Buffer */
+            glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+            glClearColor(0.8f, 0.2f, 0.2f, 1.0f);
+            glClearDepth(0.0);
             glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
             glBindVertexArray(vao);
             glDisable(GL_DEPTH_TEST);
@@ -258,7 +262,7 @@ class GraphicsEngine {
             shader.SetInt("iChannel3", texBuffer[3]->GetID());
             glBindTexture(GL_TEXTURE_2D, texBuffer[3]->GetID());
             
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDrawArrays(GL_TRIANGLES, 0, 18);
             
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             
